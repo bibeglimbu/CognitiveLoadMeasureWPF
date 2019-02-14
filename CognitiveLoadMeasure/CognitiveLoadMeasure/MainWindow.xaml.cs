@@ -65,8 +65,9 @@ namespace CognitiveLoadMeasure
             
         }
 
+        #region Timer
         /// <summary>
-        /// Method that starts <see cref="InterventionTimer"/>
+        /// Method that starts <see cref="InterventionTimer"/> at given interval. Doesnt continue calling the method again
         /// </summary>
         /// <param name="randomDuration">The time to wait before the elapsed event is thrown.</param>
         private void StartTimer(int randomDuration)
@@ -84,6 +85,21 @@ namespace CognitiveLoadMeasure
             InterventionTimer.Stop();
         }
 
+        /// <summary>
+        /// handler for when the time is elapsed for <see cref="InterventionTimer"/>
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void InterventionTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            Debug.WriteLine("Beep Beep");
+            //Console.Beep(2500, 5000);
+            PlayAudio();
+            Debug.WriteLine("Beep wat?");
+        }
+        #endregion
+
+        #region ButtonEvents
         /// <summary>
         /// True when the sound is playing
         /// </summary>
@@ -113,32 +129,6 @@ namespace CognitiveLoadMeasure
             }
 
         }
-        /// <summary>
-        /// handler for when the time is elapsed for <see cref="InterventionTimer"/>
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void InterventionTimer_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            Debug.WriteLine("Beep Beep");
-            //Console.Beep(2500, 5000);
-            PlayAudio();
-            Debug.WriteLine("Beep wat?");
-        }
-
-        private void StartButton_Click(object sender, RoutedEventArgs e)
-        {
-            Debug.WriteLine("Start Button Clicked");
-            StartButton.Background = new SolidColorBrush(Colors.Red);
-            StartRecordingData();
-        }
-
-        private void StopButton_Click(object sender, RoutedEventArgs e)
-        {
-            Debug.WriteLine("Stop Button Clicked");
-            StartButton.Background = new SolidColorBrush(Colors.White);
-            StopRecordingData();
-        }
 
         /// <summary>
         /// When overridden with hooked keys this is not thrown
@@ -147,7 +137,7 @@ namespace CognitiveLoadMeasure
         /// <param name="e"></param>
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Space)
+            if (e.Key == Key.Space && _IsRinging)
             {
                 Debug.WriteLine("LocalKeyDown");
                 Debug.WriteLine("Space button clicked");
@@ -159,12 +149,40 @@ namespace CognitiveLoadMeasure
             }
         }
 
-        #region HandleAudio
+        /// <summary>
+        /// handler for start button clicked
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void StartButton_Click(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine("Start Button Clicked");
+            StartButton.Background = new SolidColorBrush(Colors.Red);
+            StartRecordingData();
+        }
+
+        /// <summary>
+        /// handle for stop button clicked
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void StopButton_Click(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine("Stop Button Clicked");
+            StartButton.Background = new SolidColorBrush(Colors.White);
+            StopRecordingData();
+        }
+        #endregion
+
+        #region Handle Audio
         SoundPlayer player;
         /// <summary>
         /// returns the bin folder in the directory
         /// </summary>
         string directory = Environment.CurrentDirectory;
+        /// <summary>
+        /// init the sound player object in the constructor
+        /// </summary>
         private void InitSoundPlayer()
         {
             player = new SoundPlayer(directory + @"/Audio/beep.wav");
@@ -175,9 +193,11 @@ namespace CognitiveLoadMeasure
         /// </summary>
         private void PlayAudio()
         {
-            ReactionTime = DateTime.Now;
-            player.PlayLooping();
-            _IsRinging = true;
+            if (_IsRinging)
+            {
+                ReactionTime = DateTime.Now;
+                player.PlayLooping();
+            }
         }
         /// <summary>
         /// Stops playing audio
@@ -185,7 +205,6 @@ namespace CognitiveLoadMeasure
         private void StopAudio()
         {
             player.Stop();
-            _IsRinging = false;
         }
 
         #endregion
@@ -268,6 +287,9 @@ namespace CognitiveLoadMeasure
               myConnectorHub.StoreFrame(values);
             //globals.Speech.SpeakAsync("Student Data sent");
         }
+        #endregion
+
+        #region Native Methods
 
         /// <summary>
         /// Start Recording data
@@ -276,7 +298,7 @@ namespace CognitiveLoadMeasure
         {
             if (IsRecording == false)
             {
-
+                _IsRinging = true;
                 rand = new Random();
                 TimeSpan = rand.Next(1000, 3000);
                 //init the timer with the random interval
@@ -293,11 +315,10 @@ namespace CognitiveLoadMeasure
             {
                 //stop playing the audio
                 StopAudio();
+                _IsRinging = false;
                 this.IsRecording = false;
             }
         }
         #endregion
-
-
     }
 }
