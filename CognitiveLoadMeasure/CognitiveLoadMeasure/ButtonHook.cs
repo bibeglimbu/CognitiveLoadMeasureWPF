@@ -22,7 +22,7 @@ namespace CognitiveLoadMeasure
 
         public void RegisterHotKey()
         {
-            keyboardHookManager.RegisterHotkey(0x20, () =>
+            keyboardHookManager.RegisterHotkey(0x28, () =>
             {
                 Debug.WriteLine("Space detected");
                 OnKeyPressed(EventArgs.Empty);

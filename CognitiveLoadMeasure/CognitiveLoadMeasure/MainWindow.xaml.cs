@@ -20,6 +20,7 @@ using System.Threading;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using System.Reflection;
 
 namespace CognitiveLoadMeasure
 {
@@ -33,6 +34,7 @@ namespace CognitiveLoadMeasure
         /// Timer that calls the Sound play method;
         /// </summary>
         System.Timers.Timer InterventionTimer;
+        System.Timers.Timer ReactionLogTimer;
         /// <summary>
         /// Time after which to call the interval passed event from <see cref="InterventionTimer"/>
         /// </summary>
@@ -62,28 +64,53 @@ namespace CognitiveLoadMeasure
             InterventionTimer = new System.Timers.Timer();
             InterventionTimer.AutoReset = false;
             InterventionTimer.Elapsed += InterventionTimer_Elapsed;
-            
+            ReactionLogTimer = new System.Timers.Timer();
+            ReactionLogTimer.AutoReset = false;
+            ReactionLogTimer.Elapsed += ReactionLogTimer_Elapsed;
+
         }
+
+
 
         #region Timer
         /// <summary>
         /// Method that starts <see cref="InterventionTimer"/> at given interval. Doesnt continue calling the method again
         /// </summary>
         /// <param name="randomDuration">The time to wait before the elapsed event is thrown.</param>
-        private void StartTimer(int randomDuration)
+        private void StartInterventionTimer(int randomDuration)
         {
             InterventionTimer.Interval = randomDuration;
             InterventionTimer.Start();
         }
 
         /// <summary>
+        /// Method that starts <see cref="ReactionLogTimer"/> at given interval. Doesnt continue calling the method again
+        /// </summary>
+        /// <param name="randomDuration">The time to wait before the elapsed event is thrown.</param>
+        private void StartReactionTimer(int randomDuration)
+        {
+            ReactionLogTimer.Interval = randomDuration;
+            ReactionLogTimer.Start();
+        }
+
+        /// <summary>
         /// Stop <see cref="InterventionTimer"/> From calling any more methods
         /// </summary>
-        private void StopTimer()
+        private void StopIntervalTimer()
         {
-            Debug.WriteLine("TimerStopped");
+            Debug.WriteLine("IntervalTimerStopped");
             InterventionTimer.Stop();
         }
+
+        /// <summary>
+        /// Stop <see cref="ReactionLogTimer"/> From calling any more methods
+        /// </summary>
+        private void StopReactionTimer()
+        {
+            Debug.WriteLine("ReactionLogTimerStopped");
+            ReactionLogTimer.Stop();
+        }
+
 
         /// <summary>
         /// handler for when the time is elapsed for <see cref="InterventionTimer"/>
@@ -95,7 +122,27 @@ namespace CognitiveLoadMeasure
             Debug.WriteLine("Beep Beep");
             //Console.Beep(2500, 5000);
             PlayAudio();
-            Debug.WriteLine("Beep wat?");
+            //Debug.WriteLine("Beep wat?");
+        }
+        private void ReactionLogTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            if (_IsRinging)
+            {
+                //calculate the time required for the user to press the button after the sound started playing
+                _timeTakenToReact = (DateTime.Now - ReactionTime).TotalMilliseconds;
+                if (IsRecording)
+                {
+                    SendDataAsync();
+                }
+                Debug.WriteLine("Time taken to react: " + _timeTakenToReact);
+                StopAudio();
+                TimeSpan = rand.Next(1000, 5000);
+                Debug.WriteLine("Reactiontimer" + TimeSpan);
+                //init the timer with the random interval
+                StartInterventionTimer(TimeSpan);
+                //stop the reactionlogtimer
+                StopReactionTimer();
+            }
         }
         #endregion
 
@@ -123,9 +170,11 @@ namespace CognitiveLoadMeasure
                 }
                 Debug.WriteLine("Time taken to react: " + _timeTakenToReact);
                 StopAudio();
-                TimeSpan = rand.Next(1000, 3000);
+                TimeSpan = rand.Next(1000, 5000);
                 //init the timer with the random interval
-                StartTimer(TimeSpan);
+                StartInterventionTimer(TimeSpan);
+                //stop the reactionlogtimer
+                StopReactionTimer();
             }
 
         }
@@ -142,10 +191,10 @@ namespace CognitiveLoadMeasure
                 Debug.WriteLine("LocalKeyDown");
                 Debug.WriteLine("Space button clicked");
                 StopAudio();
-                TimeSpan = rand.Next(1000, 3000);
+                TimeSpan = rand.Next(1000, 5000);
 
                 //init the timer with the random interval
-                StartTimer(TimeSpan);
+                StartInterventionTimer(TimeSpan);
             }
         }
 
@@ -179,13 +228,14 @@ namespace CognitiveLoadMeasure
         /// <summary>
         /// returns the bin folder in the directory
         /// </summary>
-        string directory = Environment.CurrentDirectory;
+        //string directory = Environment.CurrentDirectory;
+        string directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         /// <summary>
         /// init the sound player object in the constructor
         /// </summary>
         private void InitSoundPlayer()
         {
-            player = new SoundPlayer(directory + @"/Audio/beep.wav");
+            player = new SoundPlayer(directory + @"/Audio/gong.wav");
             player.LoadAsync();
         }
         /// <summary>
@@ -196,7 +246,9 @@ namespace CognitiveLoadMeasure
             if (_IsRinging)
             {
                 ReactionTime = DateTime.Now;
-                player.PlayLooping();
+                player.Play();
+                //start the ReactionLog timer with 4 secs and if the user doesnt respond with in 4 seconds cancel the player and recall the interval timer
+                StartReactionTimer(4000);
             }
         }
         /// <summary>
@@ -300,9 +352,9 @@ namespace CognitiveLoadMeasure
             {
                 _IsRinging = true;
                 rand = new Random();
-                TimeSpan = rand.Next(1000, 3000);
+                TimeSpan = rand.Next(1000, 5000);
                 //init the timer with the random interval
-                StartTimer(TimeSpan);
+                StartInterventionTimer(TimeSpan);
                 this.IsRecording = true;
             }
         }
